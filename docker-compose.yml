@@ -1,0 +1,15 @@
+version: '3.8'
+services:
+  web:
+    build:
+      context: .
+      dockerfile: dockerization/Dockerfile
+    ports:
+      - "${PROJECT_PORT}:${PROJECT_PORT}"
+    volumes:
+      - "./src:/app"
+      - "./.env:/app/.env"
+    env_file:
+      - .env
+    command: python3 main.py
+
