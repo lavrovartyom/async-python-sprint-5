@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     PROJECT_PORT: int = 8000
     DB_USER: str = "postgres"
     DB_PASSWORD: str = "example"
-    DB_HOST: str = "localhost"
+    DB_HOST: str = "0.0.0.0"
     DB_PORT: int = 5432
     DB_NAME: str = "mydatabase"
     ECHO_DB: bool = False

@@ -5,8 +5,8 @@ from core.config import SETTINGS
 from models import Base
 
 DATABASE_URL = (
-    f"postgresql+asyncpg:/"
-    f"/{SETTINGS.DB_USER}:{SETTINGS.DB_PASSWORD}@"
+    f"postgresql+asyncpg://"
+    f"{SETTINGS.DB_USER}:{SETTINGS.DB_PASSWORD}@"
     f"{SETTINGS.DB_HOST}:{SETTINGS.DB_PORT}/{SETTINGS.DB_NAME}"
 )
 
