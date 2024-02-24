@@ -2,7 +2,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import ORJSONResponse
 
-# from api import views
+from api import views
 from core.config import SETTINGS
 from db import dispose_db, init_db
 
@@ -13,7 +13,7 @@ app = FastAPI(
     default_response_class=ORJSONResponse,
 )
 
-# app.include_router(views.router)
+app.include_router(views.router)
 
 
 @app.on_event("startup")
