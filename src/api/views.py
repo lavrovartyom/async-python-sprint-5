@@ -4,6 +4,7 @@ import typing as t
 from datetime import datetime, timedelta
 from uuid import uuid4
 
+import aiofiles
 from fastapi import (
     APIRouter,
     Depends,
@@ -69,7 +70,7 @@ async def download_file(
 
 @router.post("/files/upload")
 async def upload_file(
-    file: UploadFile = File(None),
+    file: UploadFile = File(...),
     request: FileUploadRequest = Depends(),
     db: AsyncSession = Depends(get_session),
     current_user: UserModel = Depends(get_current_user),
@@ -80,8 +81,12 @@ async def upload_file(
     os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
     try:
-        with open(file_path, "wb") as buffer:
-            shutil.copyfileobj(file.file, buffer)
+        async with aiofiles.open(file_path, "wb") as buffer:
+            while True:
+                content = await file.read(1024 * 1024)
+                if not content:
+                    break
+                await buffer.write(content)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Could not save file: {e}")
 

@@ -17,7 +17,7 @@ class UserModel(Base):
 class FileModel(Base):
     __tablename__ = "files"
 
-    id = Column(String, primary_key=True, index=True)
+    id = Column(String(length=300), primary_key=True, index=True)
     name = Column(String, index=True)
     created_at = Column(DateTime)
     path = Column(String)
