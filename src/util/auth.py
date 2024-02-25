@@ -18,7 +18,6 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # Для хеширования и проверки паролей
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth")
 
 

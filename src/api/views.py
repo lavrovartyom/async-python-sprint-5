@@ -1,9 +1,18 @@
 import os
 import shutil
+import typing as t
 from datetime import datetime, timedelta
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Response,
+    UploadFile,
+    status,
+)
 from fastapi.security import OAuth2PasswordRequestForm
 from passlib.hash import bcrypt
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -22,6 +31,40 @@ from util.auth import (
 from .schemas import FileUploadRequest, UserCreate, UserResponse
 
 router = APIRouter()
+
+
+@router.get("/files/download")
+async def download_file(
+    path: t.Optional[str] = None,
+    file_meta_id: t.Optional[str] = None,
+    db: AsyncSession = Depends(get_session),
+    current_user: UserModel = Depends(get_current_user),
+):
+    if not path and not file_meta_id:
+        raise HTTPException(
+            status_code=400, detail="Path or file_meta_id must be provided"
+        )
+
+    file_record = None
+    if file_meta_id:
+        result = await db.execute(select(FileModel).where(FileModel.id == file_meta_id))
+        file_record = result.scalars().first()
+    elif path:
+        result = await db.execute(select(FileModel).where(FileModel.path == path))
+        file_record = result.scalars().first()
+
+    if not file_record or file_record.owner_id != current_user.id:
+        raise HTTPException(status_code=404, detail="File not found or access denied")
+
+    file_path = file_record.path
+    try:
+        return Response(
+            content=open(file_path, "rb").read(),
+            media_type="application/octet-stream",
+            headers={"Content-Disposition": f"attachment; filename={file_record.name}"},
+        )
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="File not found on server")
 
 
 @router.post("/files/upload")
