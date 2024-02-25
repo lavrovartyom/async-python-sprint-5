@@ -1,10 +1,11 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from passlib.hash import bcrypt
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
+from sqlalchemy.sql import text
 
 from db import get_session
 from models import User
@@ -17,6 +18,19 @@ from util.auth import (
 from .schemas import UserCreate, UserResponse
 
 router = APIRouter()
+
+
+@router.get("/ping")
+async def ping(db: AsyncSession = Depends(get_session)):
+    start_time = datetime.now()
+    try:
+        await db.execute(text("SELECT 1"))
+        end_time = datetime.now()
+        db_response_time = (end_time - start_time).total_seconds()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+    return {"db": db_response_time}
 
 
 @router.post("/auth")
