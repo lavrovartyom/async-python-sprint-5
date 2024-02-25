@@ -8,16 +8,43 @@ from sqlalchemy.future import select
 from sqlalchemy.sql import text
 
 from db import get_session
-from models import User
+from models import File, User
 from util.auth import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     authenticate_user,
     create_access_token,
+    get_current_user,
 )
 
 from .schemas import UserCreate, UserResponse
 
 router = APIRouter()
+
+
+@router.get("/files/")
+async def get_files(
+    db: AsyncSession = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    async with db as session:
+        result = await session.execute(
+            select(File).where(File.owner_id == current_user.id)
+        )
+        files = result.scalars().all()
+        return {
+            "account_id": current_user.id,
+            "files": [
+                {
+                    "id": file.id,
+                    "name": file.name,
+                    "created_at": file.created_at.isoformat(),
+                    "path": file.path,
+                    "size": file.size,
+                    "is_downloadable": file.is_downloadable,
+                }
+                for file in files
+            ],
+        }
 
 
 @router.get("/ping")

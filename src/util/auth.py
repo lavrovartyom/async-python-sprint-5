@@ -8,6 +8,7 @@ from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
+from db import get_session
 from models import User
 
 # Секретный ключ для создания JWT токена
@@ -17,7 +18,8 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # Для хеширования и проверки паролей
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth")
+# oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth")
 
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
@@ -51,10 +53,18 @@ async def authenticate_user(db: AsyncSession, username: str, password: str):
     return None
 
 
-async def get_current_user(token: str = Depends(oauth2_scheme)):
+async def get_current_user(
+    db: AsyncSession = Depends(get_session), token: str = Depends(oauth2_scheme)
+) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
-    return verify_token(token, credentials_exception)
+    username = verify_token(token, credentials_exception)
+    async with db as session:
+        result = await session.execute(select(User).where(User.username == username))
+        user = result.scalars().first()
+        if user is None:
+            raise credentials_exception
+        return user
