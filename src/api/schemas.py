@@ -1,6 +1,10 @@
 from pydantic import BaseModel
 
 
+class FileUploadRequest(BaseModel):
+    path: str
+
+
 class UserCreate(BaseModel):
     username: str
     password: str

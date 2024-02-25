@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from db import get_session
-from models import User
+from models import UserModel
 
 # Секретный ключ для создания JWT токена
 SECRET_KEY = "your_secret_key"
@@ -46,7 +46,9 @@ def verify_token(token: str, credentials_exception):
 
 async def authenticate_user(db: AsyncSession, username: str, password: str):
     async with db as session:
-        result = await session.execute(select(User).where(User.username == username))
+        result = await session.execute(
+            select(UserModel).where(UserModel.username == username)
+        )
         user = result.scalars().first()
         if user and pwd_context.verify(password, user.password):
             return user
@@ -55,7 +57,7 @@ async def authenticate_user(db: AsyncSession, username: str, password: str):
 
 async def get_current_user(
     db: AsyncSession = Depends(get_session), token: str = Depends(oauth2_scheme)
-) -> User:
+) -> UserModel:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
@@ -63,7 +65,9 @@ async def get_current_user(
     )
     username = verify_token(token, credentials_exception)
     async with db as session:
-        result = await session.execute(select(User).where(User.username == username))
+        result = await session.execute(
+            select(UserModel).where(UserModel.username == username)
+        )
         user = result.scalars().first()
         if user is None:
             raise credentials_exception

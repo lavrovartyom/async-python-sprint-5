@@ -4,17 +4,17 @@ from sqlalchemy.orm import declarative_base, relationship
 Base = declarative_base()
 
 
-class User(Base):
+class UserModel(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
     password = Column(String)
 
-    files = relationship("File", back_populates="owner")
+    files = relationship("FileModel", back_populates="owner")
 
 
-class File(Base):
+class FileModel(Base):
     __tablename__ = "files"
 
     id = Column(String, primary_key=True, index=True)
@@ -25,4 +25,4 @@ class File(Base):
     is_downloadable = Column(Boolean, default=True)
     owner_id = Column(Integer, ForeignKey("users.id"))
 
-    owner = relationship("User", back_populates="files")
+    owner = relationship("UserModel", back_populates="files")

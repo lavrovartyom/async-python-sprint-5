@@ -1,6 +1,9 @@
+import os
+import shutil
 from datetime import datetime, timedelta
+from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.security import OAuth2PasswordRequestForm
 from passlib.hash import bcrypt
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,7 +11,7 @@ from sqlalchemy.future import select
 from sqlalchemy.sql import text
 
 from db import get_session
-from models import File, User
+from models import FileModel, UserModel
 from util.auth import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     authenticate_user,
@@ -16,19 +19,59 @@ from util.auth import (
     get_current_user,
 )
 
-from .schemas import UserCreate, UserResponse
+from .schemas import FileUploadRequest, UserCreate, UserResponse
 
 router = APIRouter()
+
+
+@router.post("/files/upload")
+async def upload_file(
+    file: UploadFile = File(None),
+    request: FileUploadRequest = Depends(),
+    db: AsyncSession = Depends(get_session),
+    current_user: UserModel = Depends(get_current_user),
+):
+    file_id = str(uuid4())
+    file_name = file.filename
+    file_path = os.path.join(request.path, file_name)
+    os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+    try:
+        with open(file_path, "wb") as buffer:
+            shutil.copyfileobj(file.file, buffer)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Could not save file: {e}")
+
+    file_model = FileModel(
+        id=file_id,
+        name=file_name,
+        created_at=datetime.utcnow(),
+        path=file_path,
+        size=os.path.getsize(file_path),
+        is_downloadable=True,
+        owner_id=current_user.id,
+    )
+    db.add(file_model)
+    await db.commit()
+
+    return {
+        "id": file_id,
+        "name": file_name,
+        "created_at": file_model.created_at.isoformat(),
+        "path": file_path,
+        "size": file_model.size,
+        "is_downloadable": file_model.is_downloadable,
+    }
 
 
 @router.get("/files/")
 async def get_files(
     db: AsyncSession = Depends(get_session),
-    current_user: User = Depends(get_current_user),
+    current_user: UserModel = Depends(get_current_user),
 ):
     async with db as session:
         result = await session.execute(
-            select(File).where(File.owner_id == current_user.id)
+            select(FileModel).where(FileModel.owner_id == current_user.id)
         )
         files = result.scalars().all()
         return {
@@ -86,14 +129,14 @@ async def register_user(
     user_create: UserCreate, db: AsyncSession = Depends(get_session)
 ):
     db_user = await db.execute(
-        select(User).where(User.username == user_create.username)
+        select(UserModel).where(UserModel.username == user_create.username)
     )
     db_user = db_user.scalars().first()
     if db_user:
         raise HTTPException(status_code=400, detail="Username is already taken")
 
     hashed_password = bcrypt.hash(user_create.password)
-    new_user = User(username=user_create.username, password=hashed_password)
+    new_user = UserModel(username=user_create.username, password=hashed_password)
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
